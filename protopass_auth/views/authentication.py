@@ -119,6 +119,7 @@ class AuthenticateView(APIView):
 class LogoutView(APIView):
 
     def get(self, request):
-        print(request.user)
+        if request.user.is_anonymous:
+            return JsonResponse({"error": "authentication failed"}, status=403)
         request.user.auth_token.delete()
         return HttpResponse()
