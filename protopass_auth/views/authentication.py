@@ -1,7 +1,7 @@
 import srp
 import base64
 import binascii
-from django.contrib.auth import login
+from rest_framework.authtoken.models import Token
 from django.core.exceptions import ValidationError
 from django.core.validators import validate_email
 from django.http import HttpResponse, JsonResponse
@@ -107,14 +107,18 @@ class AuthenticateView(APIView):
         if HAMK is None:
             return JsonResponse({'error': "Login failed!"}, status=403)
         else:
-            login(request, user)
+            token = Token.objects.get_or_create(user=user)[0]
 
             result = {}
             result['salt'] = base64.b64encode(user.profile.salt).decode('utf-8')
             result['serverProof'] = binascii.hexlify(HAMK).decode('utf-8')
-            result['sessionId'] = request.session.session_key
+            result['sessionId'] = str(token)
             return JsonResponse(result)
 
 
 class LogoutView(APIView):
-    pass
+
+    def get(self, request):
+        print(request.user)
+        request.user.auth_token.delete()
+        return HttpResponse()
