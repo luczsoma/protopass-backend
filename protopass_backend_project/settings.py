@@ -40,6 +40,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'rest_framework.authtoken',
     'protopass_auth',
+    'profile_handler',
 ]
 
 REST_FRAMEWORK = {
