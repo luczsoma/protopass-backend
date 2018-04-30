@@ -3,13 +3,13 @@ from django.core.exceptions import ValidationError
 from django.core.validators import validate_email
 from django.http import HttpResponse, JsonResponse
 from rest_framework.views import APIView
+from rest_framework import permissions
 
 
 class EmailValidatorView(APIView):
+    permission_classes = [permissions.AllowAny]
 
     def get(self, request):
-        print()
-
         try:
             email = request.query_params['email']
             the_id = request.query_params['id']

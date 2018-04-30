@@ -9,14 +9,15 @@ from django.utils.crypto import get_random_string
 from django.core.mail import send_mail
 from django.contrib.auth.models import User
 from rest_framework.views import APIView
+from rest_framework import permissions
 from protopass_auth.models.activation_id import ActivationId
 from protopass_auth.validators import validate_b64, validate_hex
 from protopass_auth.models.profile import Profile
 from protopass_backend_project import settings
 
 
-
 class RegisterView(APIView):
+    permission_classes = [permissions.AllowAny]
 
     def post(self, request):
 
@@ -51,6 +52,8 @@ class RegisterView(APIView):
 
 
 class ChallengeView(APIView):
+    permission_classes = [permissions.AllowAny]
+
     def post(self, request):
 
         try:
@@ -81,6 +84,8 @@ class ChallengeView(APIView):
 
 
 class AuthenticateView(APIView):
+    permission_classes = [permissions.AllowAny]
+
     def post(self, request):
         try:
             email = request.data['email']
