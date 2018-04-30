@@ -5,6 +5,8 @@ from django.db import models
 class Profile(models.Model):
     user = models.OneToOneField(get_user_model(), on_delete=models.CASCADE, related_name='profile')
 
-    verifier = models.CharField(max_length=1000, null=False, blank=False)
-    salt = models.CharField(max_length=1000, null=False, blank=False)
+    verifier = models.BinaryField(null=False, blank=False)
+    salt = models.BinaryField(null=False, blank=False)
 
+    client_challenge = models.BinaryField()
+    server_challenge_id = models.BinaryField()
