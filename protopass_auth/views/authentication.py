@@ -1,17 +1,19 @@
 import srp
 import base64
 import binascii
+from django.contrib.auth import login
 from django.core.exceptions import ValidationError
 from django.core.validators import validate_email
 from django.http import HttpResponse, JsonResponse
 from django.utils.crypto import get_random_string
-from rest_framework.views import APIView
 from django.core.mail import send_mail
-from protopass_auth.models.activation_id import ActivationId
-from protopass_auth.validators import validate_salt, validate_verifier
 from django.contrib.auth.models import User
+from rest_framework.views import APIView
+from protopass_auth.models.activation_id import ActivationId
+from protopass_auth.validators import validate_b64, validate_hex
 from protopass_auth.models.profile import Profile
 from protopass_backend_project import settings
+
 
 
 class RegisterView(APIView):
@@ -24,8 +26,8 @@ class RegisterView(APIView):
             verifier = request.data['verifier']
 
             validate_email(email)
-            validate_salt(salt)
-            validate_verifier(verifier)
+            validate_b64(salt)
+            validate_hex(verifier)
         except KeyError as e:
             return JsonResponse({'error': "{} is missing!".format(e.args[0])}, status=400)
         except ValidationError as e:
@@ -55,11 +57,15 @@ class ChallengeView(APIView):
             email = request.data['email']
             challenge = request.data['challenge']
 
+            validate_email(email)
+            validate_hex(challenge)
             user = User.objects.get(username=email)
         except KeyError as e:
             return JsonResponse({'error': "{} is missing!".format(e.args[0])}, status=400)
         except User.DoesNotExist as e:
-            return JsonResponse({'error': "User does not exist!"}, status=400)
+            return JsonResponse({'error': "User does not exist!"}, status=403)
+        except ValidationError as e:
+            return JsonResponse({'error': e.message}, status=400)
 
         svr = srp.Verifier(email, user.profile.salt, user.profile.verifier, binascii.unhexlify(challenge))
         salt, server_challenge = svr.get_challenge()
@@ -78,13 +84,17 @@ class AuthenticateView(APIView):
     def post(self, request):
         try:
             email = request.data['email']
-            clientProof = request.data['clientProof']
+            client_proof = request.data['clientProof']
 
+            validate_email(email)
+            validate_hex(client_proof)
             user = User.objects.get(username=email)
         except KeyError as e:
             return JsonResponse({'error': "{} is missing!".format(e.args[0])}, status=400)
         except User.DoesNotExist as e:
-            return JsonResponse({'error': "User does not exist!"}, status=400)
+            return JsonResponse({'error': "User does not exist!"}, status=403)
+        except ValidationError as e:
+            return JsonResponse({'error': e.message}, status=400)
 
         svr = srp.Verifier(email,
                            user.profile.salt,
@@ -92,12 +102,18 @@ class AuthenticateView(APIView):
                            user.profile.client_challenge,
                            bytes_b=user.profile.server_challenge_id)
 
-        HAMK = svr.verify_session(binascii.unhexlify(clientProof))
+        HAMK = svr.verify_session(binascii.unhexlify(client_proof))
 
         if HAMK is None:
-            return HttpResponse("FAIL", status=400)
+            return JsonResponse({'error': "Login failed!"}, status=403)
         else:
-            return HttpResponse()
+            login(request, user)
+
+            result = {}
+            result['salt'] = base64.b64encode(user.profile.salt).decode('utf-8')
+            result['serverProof'] = binascii.hexlify(HAMK).decode('utf-8')
+            result['sessionId'] = request.session.session_key
+            return JsonResponse(result)
 
 
 class LogoutView(APIView):

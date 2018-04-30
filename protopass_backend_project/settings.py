@@ -51,10 +51,6 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
-AUTHENTICATION_BACKENDS = [
-    'protopass_auth.auth_backend.AuthBackend'
-]
-
 ROOT_URLCONF = 'protopass_backend_project.urls'
 
 TEMPLATES = [

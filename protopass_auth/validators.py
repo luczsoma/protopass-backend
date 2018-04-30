@@ -1,6 +1,6 @@
-def validate_salt(salt):
+def validate_b64(salt):
     return
 
 
-def validate_verifier(verifier):
+def validate_hex(verifier):
     return
