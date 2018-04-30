@@ -10,3 +10,5 @@ class AuthProfile(models.Model):
 
     client_challenge = models.BinaryField()
     server_challenge_id = models.BinaryField()
+
+    password_reset_id = models.TextField()
