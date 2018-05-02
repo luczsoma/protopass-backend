@@ -26,7 +26,7 @@ SECRET_KEY = '1jj(*6b5&8e4f(ye5#in6k2wrgx3g%bbk!w022wbr&1h8br76f'
 DEBUG = True
 
 ALLOWED_HOSTS = [
-    'https://protopass-frontend.azurewebsites.net',
+    'protopass-frontend.azurewebsites.net',
     # 'localhost',
 ]
 
@@ -68,7 +68,7 @@ MIDDLEWARE = [
 
 CORS_ORIGIN_WHITELIST = (
     'https://protopass-frontend.azurewebsites.net',
-    # 'localhost:4200',
+    # 'http://localhost:4200',
 )
 
 ROOT_URLCONF = 'protopass_backend_project.urls'
