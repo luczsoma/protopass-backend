@@ -23,10 +23,10 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SECRET_KEY = '1jj(*6b5&8e4f(ye5#in6k2wrgx3g%bbk!w022wbr&1h8br76f'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = False
 
 ALLOWED_HOSTS = [
-    'protopass-frontend.azurewebsites.net',
+    'protopass-backend.azurewebsites.net',
     # 'localhost',
 ]
 
