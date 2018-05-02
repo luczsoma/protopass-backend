@@ -13,6 +13,7 @@ from rest_framework import permissions
 from protopass_auth.models.activation_id import ActivationId
 from protopass_auth.models.authprofile import AuthProfile
 from protopass_backend_project import settings
+from urllib.parse import urlencode
 
 
 class RegisterView(APIView):
@@ -42,7 +43,7 @@ class RegisterView(APIView):
         activation_id = ActivationId.objects.create(user=user, activation_id=get_random_string(length=32))
 
         send_mail("Protopass activation",
-                  "https://" + request.get_host() + "/validate?email=" + email + "&id=" + activation_id.activation_id,
+                  "https://protopass-frontend.azurewebsites.net/validate?" + urlencode({'email': email, 'id': activation_id.activation_id}),
                   settings.EMAIL_HOST_USER,
                   [email],
                   fail_silently=False)
@@ -179,7 +180,7 @@ class ResetPasswordView(APIView):
         user.auth_profile.save()
 
         send_mail("Protopass password reset",
-                  "https://" + request.get_host() + "/resetPassword?id=" + reset_id,
+                  "https://protopass-frontend.azurewebsites.net/resetPassword?" + urlencode({'id': reset_id}),
                   settings.EMAIL_HOST_USER,
                   [email],
                   fail_silently=False)
