@@ -11,7 +11,6 @@ https://docs.djangoproject.com/en/1.11/ref/settings/
 """
 
 import os
-import email_creds
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 
@@ -24,9 +23,12 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SECRET_KEY = '1jj(*6b5&8e4f(ye5#in6k2wrgx3g%bbk!w022wbr&1h8br76f'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = False
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = [
+    'protopass-backend.azurewebsites.net',
+    # 'localhost',
+]
 
 # Application definition
 
@@ -41,6 +43,7 @@ INSTALLED_APPS = [
     'rest_framework.authtoken',
     'protopass_auth',
     'profile_handler',
+    'corsheaders',
 ]
 
 REST_FRAMEWORK = {
@@ -55,12 +58,18 @@ REST_FRAMEWORK = {
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
+
+CORS_ORIGIN_WHITELIST = (
+    'https://protopass-frontend.azurewebsites.net',
+    # 'http://localhost:4200',
+)
 
 ROOT_URLCONF = 'protopass_backend_project.urls'
 
