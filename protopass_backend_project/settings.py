@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/1.11/ref/settings/
 """
 
 import os
+import email_creds
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 
@@ -129,8 +130,8 @@ STATIC_URL = '/static/'
 
 ATOMIC_REQUESTS = True
 
-EMAIL_USE_TLS = True
-EMAIL_HOST = 'smtp.gmail.com'
-EMAIL_HOST_USER = 'luczsoma@gmail.com'
-EMAIL_HOST_PASSWORD = 'czwhrkjesyuigmme'
-EMAIL_PORT = 587
+EMAIL_USE_TLS = email_creds.EMAIL_USE_TLS
+EMAIL_HOST = email_creds.EMAIL_HOST
+EMAIL_HOST_USER = email_creds.EMAIL_HOST_USER
+EMAIL_HOST_PASSWORD = email_creds.EMAIL_HOST_PASSWORD
+EMAIL_PORT = email_creds.EMAIL_PORT
