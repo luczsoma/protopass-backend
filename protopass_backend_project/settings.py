@@ -67,8 +67,8 @@ MIDDLEWARE = [
 ]
 
 CORS_ORIGIN_WHITELIST = (
-    'https://protopass-frontend.azurewebsites.net',
-    # 'http://localhost:4200',
+    'protopass-frontend.azurewebsites.net',
+    # 'localhost:4200',
 )
 
 ROOT_URLCONF = 'protopass_backend_project.urls'
