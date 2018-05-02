@@ -26,15 +26,15 @@ class RegisterView(APIView):
             verifier = binascii.unhexlify(request.data['verifier'])
 
             validate_email(email)
-        except KeyError as e:
-            return JsonResponse({'error': "{} is missing!".format(e.args[0])}, status=400)
-        except ValidationError as e:
-            return JsonResponse({'error': e.message}, status=400)
+        except KeyError:
+            return JsonResponse({'error': "BadInput"}, status=400)
+        except ValidationError:
+            return JsonResponse({'error': "BadInput"}, status=400)
         except binascii.Error:
-            return JsonResponse({'error': 'base64/hex format error'}, status=400)
+            return JsonResponse({'error': 'SaltNotValid'}, status=400)
 
         if len(User.objects.filter(username=email)) > 0:
-            return JsonResponse({'error': 'User already exists'}, status=403)
+            return JsonResponse({'error': 'UserAlreadyExists'}, status=403)
 
         user = User.objects.create(username=email, email=email, is_active=False)
         AuthProfile.objects.create(user=user, salt=salt, verifier=verifier)
@@ -42,7 +42,7 @@ class RegisterView(APIView):
         activation_id = ActivationId.objects.create(user=user, activation_id=get_random_string(length=32))
 
         send_mail("Protopass activation",
-                  "http://" + request.get_host() + "/validate?email=" + email + "&id=" + activation_id.activation_id,
+                  "https://" + request.get_host() + "/validate?email=" + email + "&id=" + activation_id.activation_id,
                   settings.EMAIL_HOST_USER,
                   [email],
                   fail_silently=False)
@@ -57,18 +57,18 @@ class ChallengeView(APIView):
 
         try:
             email = request.data['email']
-            challenge = binascii.unhexlify(request.data['challenge'])
+            challenge = binascii.unhexlify(request.data['clientChallenge'])
 
             validate_email(email)
             user = User.objects.get(username=email)
-        except KeyError as e:
-            return JsonResponse({'error': "{} is missing!".format(e.args[0])}, status=400)
-        except User.DoesNotExist as e:
-            return JsonResponse({'error': "User does not exist!"}, status=403)
-        except ValidationError as e:
-            return JsonResponse({'error': e.message}, status=400)
+        except KeyError:
+            return JsonResponse({'error': "BadInput"}, status=400)
+        except User.DoesNotExist:
+            return JsonResponse({'error': "UserNotExists"}, status=403)
+        except ValidationError:
+            return JsonResponse({'error': 'EmailNotValid'}, status=400)
         except binascii.Error:
-            return JsonResponse({'error': 'hex format error'}, status=400)
+            return JsonResponse({'error': 'BadInput'}, status=400)
 
         svr = srp.Verifier(email, user.auth_profile.salt, user.auth_profile.verifier, challenge)
         salt, server_challenge = svr.get_challenge()
@@ -93,14 +93,14 @@ class AuthenticateView(APIView):
 
             validate_email(email)
             user = User.objects.get(username=email)
-        except KeyError as e:
-            return JsonResponse({'error': "{} is missing!".format(e.args[0])}, status=400)
-        except User.DoesNotExist as e:
-            return JsonResponse({'error': "User does not exist!"}, status=403)
-        except ValidationError as e:
-            return JsonResponse({'error': e.message}, status=400)
+        except KeyError:
+            return JsonResponse({'error': "BadInput"}, status=400)
+        except User.DoesNotExist:
+            return JsonResponse({'error': "UserNotExists"}, status=403)
+        except ValidationError:
+            return JsonResponse({'error': 'EmailNotValid'}, status=400)
         except binascii.Error:
-            return JsonResponse({'error': 'hex format error'}, status=400)
+            return JsonResponse({'error': 'ClientProofNotValid'}, status=400)
 
         svr = srp.Verifier(email,
                            user.auth_profile.salt,
@@ -111,7 +111,7 @@ class AuthenticateView(APIView):
         HAMK = svr.verify_session(client_proof)
 
         if HAMK is None:
-            return JsonResponse({'error': "Login failed!"}, status=403)
+            return JsonResponse({'error': "ClientProofIncorrect"}, status=403)
         else:
             token = Token.objects.get_or_create(user=user)[0]
 
@@ -126,7 +126,7 @@ class LogoutView(APIView):
 
     def get(self, request):
         if request.user.is_anonymous:
-            return JsonResponse({"error": "authentication failed"}, status=403)
+            return JsonResponse({"error": "InvalidSession"}, status=403)
         request.user.auth_token.delete()
         return HttpResponse()
 
@@ -140,12 +140,12 @@ class ChangePasswordView(APIView):
             verifier = binascii.unhexlify(request.data['verifier'])
 
             validate_email(email)
-        except KeyError as e:
-            return JsonResponse({'error': "{} is missing!".format(e.args[0])}, status=400)
-        except ValidationError as e:
-            return JsonResponse({'error': e.message}, status=400)
+        except KeyError:
+            return JsonResponse({'error': "BadInput"}, status=400)
+        except ValidationError:
+            return JsonResponse({'error': "EmailNotValid"}, status=400)
         except binascii.Error:
-            return JsonResponse({'error': 'base64/hex format error'}, status=400)
+            return JsonResponse({'error': 'SaltNotValid'}, status=400)
 
         request.user.username = email
         request.user.email = email
@@ -164,22 +164,22 @@ class ResetPasswordView(APIView):
         email = request.query_params.get('email')
 
         if email is None:
-            return JsonResponse({'error': 'Missing email address'}, status=400)
+            return JsonResponse({'error': 'BadInput'}, status=400)
 
         try:
             validate_email(email)
             user = User.objects.get(username=email)
         except User.DoesNotExist:
-            return JsonResponse({'error': 'User not found'}, status=400)
-        except ValidationError as e:
-            return JsonResponse({'error': e.message}, status=400)
+            return JsonResponse({'error': 'UserNotExists'}, status=403)
+        except ValidationError:
+            return JsonResponse({'error': 'EmailNotValid'}, status=400)
 
         reset_id = get_random_string(length=32)
         user.auth_profile.password_reset_id = reset_id
         user.auth_profile.save()
 
         send_mail("Protopass password reset",
-                  "http://" + request.get_host() + "/resetPassword?id=" + reset_id,
+                  "https://" + request.get_host() + "/resetPassword?id=" + reset_id,
                   settings.EMAIL_HOST_USER,
                   [email],
                   fail_silently=False)
@@ -191,23 +191,24 @@ class ResetPasswordView(APIView):
         reset_id = request.query_params.get('id')
 
         if reset_id is None:
-            return JsonResponse({'error': 'Missing id'}, status=400)
+            return JsonResponse({'error': 'BadInput'}, status=400)
 
         try:
             salt = base64.b64decode(request.data['salt'])
             verifier = binascii.unhexlify(request.data['verifier'])
-        except KeyError as e:
-            return JsonResponse({'error': "{} is missing!".format(e.args[0])}, status=400)
+        except KeyError:
+            return JsonResponse({'error': "BadInput"}, status=400)
         except binascii.Error:
-            return JsonResponse({'error': 'base64/hex format error'}, status=400)
+            return JsonResponse({'error': 'SaltNotValid'}, status=400)
 
         profiles = AuthProfile.objects.filter(password_reset_id=reset_id)
         if len(profiles > 0):
             profile = profiles[0]
+        else:
+            return JsonResponse({'error': 'InvalidId'}, status=403)
 
         profile.salt = salt
         profile.verifier = verifier
         profile.save()
 
         return HttpResponse()
-

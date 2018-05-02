@@ -17,15 +17,19 @@ class UploadProfileView(APIView):
             container_key_salt = base64.b64decode(request.data['containerKeySalt'])
             init_vector = base64.b64decode(request.data['initializationVector'])
         except KeyError as e:
-            return JsonResponse({'error': "{} is missing!".format(e.args[0])}, status=400)
+            return JsonResponse({'error': "BadInput".format(e.args[0])}, status=400)
         except binascii.Error:
-            return JsonResponse({'error': "base64format error"}, status=400)
+            return JsonResponse({'error': "BadInput"}, status=400)
 
         try:
             profile = request.user.protopass_profile
 
-            if profile.container_key_salt == container_key_salt or profile.init_vector == init_vector:
-                return JsonResponse({'error': "salt/initvector not fresh!"}, status=412)
+            if profile.init_vector == init_vector:
+                return JsonResponse({'error': "InitializationVectorNotFresh"}, status=412)
+
+            if profile.container_key_salt == container_key_salt:
+                return JsonResponse({'error': "ContainerKeySaltNotFresh"}, status=412)
+
         except ObjectDoesNotExist as e:
             profile = ProtopassProfile.objects.create(user=request.user, storage_key=get_random_string(length=32))
 
@@ -43,7 +47,7 @@ class DownloadProfileView(APIView):
     def get(self, request):
         profile = request.user.protopass_profile
         if profile is None:
-            return JsonResponse({'error': "Profile not found!"}, status=404)
+            return JsonResponse({'error': "UserProfileNotFound"}, status=404)
 
         result = {}
         result['encryptedUserProfile'] = base64.b64encode(profile.profile_data).decode('utf-8')
@@ -75,6 +79,3 @@ class DownloadStorageKeyView(APIView):
             result = profile.storage_key
 
         return JsonResponse({'containerPasswordStorageKey': result})
-
-
-

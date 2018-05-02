@@ -18,18 +18,18 @@ class EmailValidatorView(APIView):
 
             user = User.objects.get(username=email)
             if user.is_active:
-                return JsonResponse({'error': 'The user already registered'}, status=403)
+                return JsonResponse({'error': 'UserIsInWrongState'}, status=403)
             if user.activation_id.activation_id == the_id:
                 user.activation_id.delete()
                 user.is_active = True
                 user.save()
             else:
-                return JsonResponse({'error': 'the provided id is not valid'}, status=403)
-        except KeyError as e:
-            return JsonResponse({'error': "{} is missing!".format(e.args[0])}, status=400)
-        except User.DoesNotExist as e:
-            return JsonResponse({'error': "User does not exist!"}, status=403)
-        except ValidationError as e:
-            return JsonResponse({'error': e.message}, status=400)
+                return JsonResponse({'error': 'IdNotValid'}, status=403)
+        except KeyError:
+            return JsonResponse({'error': "BadInput"}, status=400)
+        except User.DoesNotExist:
+            return JsonResponse({'error': "UserNotExists"}, status=403)
+        except ValidationError:
+            return JsonResponse({'error': 'EmailNotValid'}, status=400)
 
         return HttpResponse()
