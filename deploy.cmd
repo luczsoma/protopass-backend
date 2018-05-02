@@ -76,12 +76,6 @@ IF DEFINED KUDU_SELECT_PYTHON_VERSION_CMD (
   SET PYTHON_ENV_MODULE=virtualenv
 )
 
-SET PYTHON_RUNTIME=python-3.4
-SET PYTHON_VER=3.4
-SET PYTHON_EXE=%SYSTEMDRIVE%\Python34\python.exe
-SET PIP_EXE=%SYSTEMDRIVE%\Python34\Scripts\pip3.4.exe
-SET PYTHON_ENV_MODULE=virtualenv
-
 goto :EOF
 
 ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
@@ -108,50 +102,50 @@ call :SelectPythonVersion
 pushd "%DEPLOYMENT_TARGET%"
 
 :: 3. Create virtual environment
-:: IF NOT EXIST "%DEPLOYMENT_TARGET%\env\azure.env.%PYTHON_RUNTIME%.txt" (
-::   IF EXIST "%DEPLOYMENT_TARGET%\env" (
-::     echo Deleting incompatible virtual environment.
-::     rmdir /q /s "%DEPLOYMENT_TARGET%\env"
-::     IF !ERRORLEVEL! NEQ 0 goto error
-::   )
-::
-::   echo Creating %PYTHON_RUNTIME% virtual environment.
-::   %PYTHON_EXE% -m %PYTHON_ENV_MODULE% env
-::   IF !ERRORLEVEL! NEQ 0 goto error
-::
-::   copy /y NUL "%DEPLOYMENT_TARGET%\env\azure.env.%PYTHON_RUNTIME%.txt" >NUL
-:: ) ELSE (
-::   echo Found compatible virtual environment.
-:: )
+IF NOT EXIST "%DEPLOYMENT_TARGET%\env\azure.env.%PYTHON_RUNTIME%.txt" (
+  IF EXIST "%DEPLOYMENT_TARGET%\env" (
+    echo Deleting incompatible virtual environment.
+    rmdir /q /s "%DEPLOYMENT_TARGET%\env"
+    IF !ERRORLEVEL! NEQ 0 goto error
+  )
+
+  echo Creating %PYTHON_RUNTIME% virtual environment.
+  %PYTHON_EXE% -m %PYTHON_ENV_MODULE% env
+  IF !ERRORLEVEL! NEQ 0 goto error
+
+  copy /y NUL "%DEPLOYMENT_TARGET%\env\azure.env.%PYTHON_RUNTIME%.txt" >NUL
+) ELSE (
+  echo Found compatible virtual environment.
+)
 
 :: 4. Install packages
 echo Pip install requirements.
-%PIP_EXE% install -r requirements.txt
+env\scripts\pip install -r requirements.txt
 IF !ERRORLEVEL! NEQ 0 goto error
 
-:: REM Add additional package installation here
-:: REM -- Example --
-:: REM env\scripts\easy_install pytz
-:: REM IF !ERRORLEVEL! NEQ 0 goto error
+REM Add additional package installation here
+REM -- Example --
+REM env\scripts\easy_install pytz
+REM IF !ERRORLEVEL! NEQ 0 goto error
 
 :: 5. Copy web.config
-:: IF EXIST "%DEPLOYMENT_SOURCE%\web.%PYTHON_VER%.config" (
-::   echo Overwriting web.config with web.%PYTHON_VER%.config
-::   copy /y "%DEPLOYMENT_SOURCE%\web.%PYTHON_VER%.config" "%DEPLOYMENT_TARGET%\web.config"
-:: )
+IF EXIST "%DEPLOYMENT_SOURCE%\web.%PYTHON_VER%.config" (
+  echo Overwriting web.config with web.%PYTHON_VER%.config
+  copy /y "%DEPLOYMENT_SOURCE%\web.%PYTHON_VER%.config" "%DEPLOYMENT_TARGET%\web.config"
+)
 
 :: 6. Django collectstatic
-:: IF EXIST "%DEPLOYMENT_TARGET%\manage.py" (
-::   IF EXIST "%DEPLOYMENT_TARGET%\env\lib\site-packages\django" (
-::     IF NOT EXIST "%DEPLOYMENT_TARGET%\.skipDjango" (
-::       echo Collecting Django static files. You can skip Django specific steps with a .skipDjango file.
-::       IF NOT EXIST "%DEPLOYMENT_TARGET%\static" (
-::         MKDIR "%DEPLOYMENT_TARGET%\static"
-::       )
-::       env\scripts\python manage.py collectstatic --noinput --clear
-::     )
-::   )
-:: )
+IF EXIST "%DEPLOYMENT_TARGET%\manage.py" (
+  IF EXIST "%DEPLOYMENT_TARGET%\env\lib\site-packages\django" (
+    IF NOT EXIST "%DEPLOYMENT_TARGET%\.skipDjango" (
+      echo Collecting Django static files. You can skip Django specific steps with a .skipDjango file.
+      IF NOT EXIST "%DEPLOYMENT_TARGET%\static" (
+        MKDIR "%DEPLOYMENT_TARGET%\static"
+      )
+      env\scripts\python manage.py collectstatic --noinput --clear
+    )
+  )
+)
 
 popd
 
