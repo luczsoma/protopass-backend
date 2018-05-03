@@ -1,5 +1,4 @@
 import srp
-import base64
 import binascii
 from rest_framework.authtoken.models import Token
 from django.core.exceptions import ValidationError
@@ -23,7 +22,7 @@ class RegisterView(APIView):
 
         try:
             email = request.data['email']
-            salt = base64.b64decode(request.data['salt'])
+            salt = binascii.unhexlify(request.data['salt'])
             verifier = binascii.unhexlify(request.data['verifier'])
 
             validate_email(email)
@@ -40,7 +39,7 @@ class RegisterView(APIView):
         user = User.objects.create(username=email, email=email, is_active=False)
         AuthProfile.objects.create(user=user, salt=salt, verifier=verifier)
 
-        activation_id = ActivationId.objects.create(user=user, activation_id=get_random_string(length=32))
+        activation_id = ActivationId.objects.create(user=user, activation_id=get_random_string(length=128))
 
         send_mail("Protopass activation",
                   "https://protopass-frontend.azurewebsites.net/validate?" + urlencode({'email': email, 'id': activation_id.activation_id}),
@@ -71,7 +70,7 @@ class ChallengeView(APIView):
         except binascii.Error:
             return JsonResponse({'error': 'BadInput'}, status=400)
 
-        svr = srp.Verifier(email, user.auth_profile.salt, user.auth_profile.verifier, challenge)
+        svr = srp.Verifier(email, user.auth_profile.salt, user.auth_profile.verifier, challenge, hash_alg=srp.SHA256)
         salt, server_challenge = svr.get_challenge()
 
         user.auth_profile.client_challenge = challenge
@@ -79,7 +78,7 @@ class ChallengeView(APIView):
         user.auth_profile.save()
 
         return JsonResponse({
-            'salt': base64.b64encode(salt).decode('utf-8'),
+            'salt': binascii.hexlify(salt).decode('utf-8'),
             'serverChallenge': binascii.hexlify(server_challenge).decode('utf-8')
         })
 
@@ -107,7 +106,8 @@ class AuthenticateView(APIView):
                            user.auth_profile.salt,
                            user.auth_profile.verifier,
                            user.auth_profile.client_challenge,
-                           bytes_b=user.auth_profile.server_challenge_id)
+                           bytes_b=user.auth_profile.server_challenge_id,
+                           hash_alg=srp.SHA256)
 
         HAMK = svr.verify_session(client_proof)
 
@@ -117,30 +117,27 @@ class AuthenticateView(APIView):
             token = Token.objects.get_or_create(user=user)[0]
 
             result = {}
-            result['salt'] = base64.b64encode(user.auth_profile.salt).decode('utf-8')
+            result['salt'] = binascii.hexlify(user.auth_profile.salt).decode('utf-8')
             result['serverProof'] = binascii.hexlify(HAMK).decode('utf-8')
             result['sessionId'] = str(token)
             return JsonResponse(result)
 
 
 class LogoutView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request):
-        if request.user.is_anonymous:
-            return JsonResponse({"error": "InvalidSession"}, status=403)
         request.user.auth_token.delete()
         return HttpResponse()
 
 
 class ChangePasswordView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
 
     def post(self, request):
         try:
-            email = request.data['email']
-            salt = base64.b64decode(request.data['salt'])
+            salt = binascii.unhexlify(request.data['salt'])
             verifier = binascii.unhexlify(request.data['verifier'])
-
-            validate_email(email)
         except KeyError:
             return JsonResponse({'error': "BadInput"}, status=400)
         except ValidationError:
@@ -148,8 +145,6 @@ class ChangePasswordView(APIView):
         except binascii.Error:
             return JsonResponse({'error': 'SaltNotValid'}, status=400)
 
-        request.user.username = email
-        request.user.email = email
         request.user.auth_profile.salt = salt
         request.user.auth_profile.verifier = verifier
         request.user.auth_profile.save()
@@ -175,12 +170,12 @@ class ResetPasswordView(APIView):
         except ValidationError:
             return JsonResponse({'error': 'EmailNotValid'}, status=400)
 
-        reset_id = get_random_string(length=32)
+        reset_id = get_random_string(length=128)
         user.auth_profile.password_reset_id = reset_id
         user.auth_profile.save()
 
         send_mail("Protopass password reset",
-                  "https://protopass-frontend.azurewebsites.net/resetPassword?" + urlencode({'id': reset_id}),
+                  "https://protopass-frontend.azurewebsites.net/reset-password?" + urlencode({'id': reset_id, 'email': email}),
                   settings.EMAIL_HOST_USER,
                   [email],
                   fail_silently=False)
@@ -194,8 +189,11 @@ class ResetPasswordView(APIView):
         if reset_id is None:
             return JsonResponse({'error': 'BadInput'}, status=400)
 
+        if len(reset_id) != 128:
+            return JsonResponse({'error': 'BadInput'}, status=400)
+
         try:
-            salt = base64.b64decode(request.data['salt'])
+            salt = binascii.unhexlify(request.data['salt'])
             verifier = binascii.unhexlify(request.data['verifier'])
         except KeyError:
             return JsonResponse({'error': "BadInput"}, status=400)
@@ -203,13 +201,14 @@ class ResetPasswordView(APIView):
             return JsonResponse({'error': 'SaltNotValid'}, status=400)
 
         profiles = AuthProfile.objects.filter(password_reset_id=reset_id)
-        if len(profiles > 0):
+        if len(profiles) > 0:
             profile = profiles[0]
         else:
             return JsonResponse({'error': 'InvalidId'}, status=403)
 
         profile.salt = salt
         profile.verifier = verifier
+        profile.password_reset_id = ''
         profile.save()
 
         return HttpResponse()

@@ -20,7 +20,7 @@ class Migration(migrations.Migration):
             name='ActivationId',
             fields=[
                 ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('activation_id', models.CharField(max_length=32)),
+                ('activation_id', models.CharField(max_length=128)),
                 ('user', models.OneToOneField(on_delete=django.db.models.deletion.CASCADE, related_name='activation_id', to=settings.AUTH_USER_MODEL)),
             ],
         ),

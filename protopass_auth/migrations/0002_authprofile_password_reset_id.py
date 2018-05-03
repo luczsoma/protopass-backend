@@ -15,7 +15,7 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='authprofile',
             name='password_reset_id',
-            field=models.TextField(default=666),
+            field=models.CharField(max_length=128),
             preserve_default=False,
         ),
     ]

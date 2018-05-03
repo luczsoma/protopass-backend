@@ -26,4 +26,12 @@ class Migration(migrations.Migration):
                 ('user', models.OneToOneField(on_delete=django.db.models.deletion.CASCADE, related_name='protopass_profile', to=settings.AUTH_USER_MODEL)),
             ],
         ),
+        migrations.CreateModel(
+            name='ProtopassContainerPasswordStorageKey',
+            fields=[
+                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('key', models.CharField(max_length=128)),
+                ('user', models.OneToOneField(on_delete=django.db.models.deletion.CASCADE, related_name='container_password_storage_key', to=settings.AUTH_USER_MODEL)),
+            ],
+        ),
     ]
