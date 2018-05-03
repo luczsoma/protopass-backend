@@ -204,7 +204,7 @@ class ResetPasswordView(APIView):
         except User.DoesNotExist:
             return JsonResponse({'error': 'UserNotExists'}, status=403)
 
-        if not user.protopass_profile.password_reset_id == reset_id:
+        if not user.auth_profile.password_reset_id == reset_id:
             return JsonResponse({'error': 'InvalidId'}, status=403)
         else:
             user.auth_profile.salt = salt
