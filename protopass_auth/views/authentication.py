@@ -207,9 +207,9 @@ class ResetPasswordView(APIView):
         if not user.protopass_profile.password_reset_id == reset_id:
             return JsonResponse({'error': 'InvalidId'}, status=403)
         else:
-            user.protopass_profile.salt = salt
-            user.protopass_profile.verifier = verifier
-            user.protopass_profile.password_reset_id = ''
-            user.protopass_profile.save()
+            user.auth_profile.salt = salt
+            user.auth_profile.verifier = verifier
+            user.auth_profile.password_reset_id = ''
+            user.auth_profile.save()
 
         return HttpResponse()
