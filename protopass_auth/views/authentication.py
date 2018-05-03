@@ -70,6 +70,9 @@ class ChallengeView(APIView):
         except binascii.Error:
             return JsonResponse({'error': 'BadInput'}, status=400)
 
+        if not user.is_active:
+            return JsonResponse({'error': "UserNotExists"}, status=403)
+
         svr = srp.Verifier(email, user.auth_profile.salt, user.auth_profile.verifier, challenge, hash_alg=srp.SHA256)
         salt, server_challenge = svr.get_challenge()
 
@@ -113,11 +116,17 @@ class AuthenticateView(APIView):
 
         user.auth_profile.client_challenge = b''
         user.auth_profile.server_challenge_id = b''
+        user.auth_profile.save()
 
         if HAMK is None:
             return JsonResponse({'error': "ClientProofIncorrect"}, status=403)
         else:
             token = Token.objects.get_or_create(user=user)[0]
+
+            try:
+                user.container_password_storage_key.delete()
+            except:
+                pass
 
             result = {}
             result['salt'] = binascii.hexlify(user.auth_profile.salt).decode('utf-8')
@@ -131,6 +140,12 @@ class LogoutView(APIView):
 
     def get(self, request):
         request.user.auth_token.delete()
+
+        try:
+            request.user.container_password_storage_key.delete()
+        except:
+            pass
+
         return HttpResponse()
 
 
