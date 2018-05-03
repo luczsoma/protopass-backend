@@ -111,6 +111,9 @@ class AuthenticateView(APIView):
 
         HAMK = svr.verify_session(client_proof)
 
+        user.auth_profile.client_challenge = b''
+        user.auth_profile.server_challenge_id = b''
+
         if HAMK is None:
             return JsonResponse({'error': "ClientProofIncorrect"}, status=403)
         else:
