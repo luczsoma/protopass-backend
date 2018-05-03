@@ -184,31 +184,29 @@ class ResetPasswordView(APIView):
 
     def post(self, request):
 
-        reset_id = request.query_params.get('id')
-
-        if reset_id is None:
-            return JsonResponse({'error': 'BadInput'}, status=400)
-
-        if len(reset_id) != 128:
-            return JsonResponse({'error': 'BadInput'}, status=400)
-
         try:
             salt = binascii.unhexlify(request.data['salt'])
             verifier = binascii.unhexlify(request.data['verifier'])
+            reset_id = request.query_params['id']
+            email = request.query_params['email']
+
+            if len(reset_id) != 128:
+                return JsonResponse({'error': 'BadInput'}, status=400)
+
+            user = User.objects.get(username=email)
         except KeyError:
             return JsonResponse({'error': "BadInput"}, status=400)
         except binascii.Error:
             return JsonResponse({'error': 'SaltNotValid'}, status=400)
+        except User.DoesNotExist:
+            return JsonResponse({'error': 'UserNotExists'}, status=403)
 
-        profiles = AuthProfile.objects.filter(password_reset_id=reset_id)
-        if len(profiles) > 0:
-            profile = profiles[0]
-        else:
+        if not user.protopass_profile.password_reset_id == reset_id:
             return JsonResponse({'error': 'InvalidId'}, status=403)
-
-        profile.salt = salt
-        profile.verifier = verifier
-        profile.password_reset_id = ''
-        profile.save()
+        else:
+            user.protopass_profile.salt = salt
+            user.protopass_profile.verifier = verifier
+            user.protopass_profile.password_reset_id = ''
+            user.protopass_profile.save()
 
         return HttpResponse()
